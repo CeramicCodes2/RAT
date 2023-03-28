@@ -84,7 +84,7 @@ class CGhiosProtocol(asyncio.Protocol):
         cmd = package.get('CONTENT')
         #CGhiosProtocol.EXECUTE_GUID = package
             # compare if its the sance if its false the command will be executed
-        if cmd or cmd != '':
+        if cmd or cmd != '' and isinstance(cmd,str):
             #try:
             # ? test tis code:
             #result = self._transport.run(cmd,shell=True,capture_output=True,text=True)
@@ -225,5 +225,5 @@ class TCP_MASTER(Client):
 if __name__ == '__main__':
     #TCP_CLIENT(7777)
     print('starting connection !')
-    TCP_MASTER(7777,'DESKTOP-3JFVI4N').run()
+    TCP_MASTER(7777,'172.28.105.96').run()
     

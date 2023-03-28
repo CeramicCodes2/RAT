@@ -43,7 +43,7 @@ class SGhiosProtocol(asyncio.Protocol):
         self._transport:asyncio.BaseTransports = None
         self._out = ''
         self._err = ''
-        self._ReadyConnections:dict[str,asyncio] = dict()# pool of ready connections
+        self._ReadyConnections:dict[str,asyncio.BaseTransport] = dict()# pool of ready connections
         # self._adminConnections = dict()
         # requests of admin client 
         # no se mezclan las peticiones

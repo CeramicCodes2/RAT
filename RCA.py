@@ -194,7 +194,7 @@ class Client:
         wanna sent to the server
         ''' 
         header = order.get('HEADER')
-        print(header)
+        #print(header)
         match header:
             case '0x04':
                 protocol.start_connection()
@@ -245,6 +245,21 @@ class TCP_MASTER(Client):
         super().__init__(port)
         self.codec = {}
         self.stdout = print# funcion de impresion de datos
+        self._rapidAcitions = {
+            'auth':self._Auth,
+            'errors':self._checkErrors    
+        }# if some flag is inside them then execute this subrutine 
+        self._rkeys = self._rapidAcitions.keys()
+    async def _Auth(self):
+        await super().startAuth()
+        # execute the old auth form
+    async def _checkErrors(self):
+        self.codec = CODECS_FLE.get('0x16')
+        # get succressful
+        self.run()
+        self.codec = CODECS_FLE.get('0x15')
+        self.run()
+        # get errors
     @property
     def setCommandExec(self):
         return super().command
@@ -253,10 +268,12 @@ class TCP_MASTER(Client):
         super().command = arg
     async def startAuth(self):
         # start handshake an logging 
-        await self.main_loop(command=CODECS_FLE.get('0x04'))# start
-        await self.main_loop(command=CODECS_FLE.get('0x10'))# login
-        # execution of the command
+        #await self.main_loop(command=CODECS_FLE.get('0x04'))# start
+        #await self.main_loop(command=CODECS_FLE.get('0x10'))# login
+        if isinstance(self.codec,str) and self.codec in self._rkeys:
+            return await self._rapidAcitions.get(self.codec)()
         await self.main_loop(command=self.codec)
+        # super().startAuth()
     async def _execute(self,lp:asyncio.AbstractEventLoop,on_con_lost:asyncio.AbstractEventLoop,serverName:str,port:int):
         
         return await lp.create_connection(lambda : CGhiosProtocol(stdout=self.stdout,on_con_lost=on_con_lost),host=serverName,port=port)
@@ -264,11 +281,13 @@ class TCP_MASTER(Client):
 if __name__ == '__main__':
     #self.stdout('starting connection !')
     master = TCP_MASTER(7777)
-    #master.codec = {'HEADER':'0x16'}
-    #master.codec = {'HEADER':'0x17'}
-    #master.command = 'mkdir hello'
-    #master.run()
-    master.codec = CODECS_FLE.get('0x17')
-    #print(master.codec)
+    master.codec = 'auth'#master._rapidAcitions.get('auth')
+    #authenticate
     master.run()
+    #master.codec = CODECS_FLE.get('0x11')
+    #master.command = 'dir'
+    # writes dir into the server
+    master.codec = 'errors'
+    master.run()
+    # executes the command
     
