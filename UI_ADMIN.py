@@ -50,27 +50,20 @@ class ListView(Frame):
     def writeCommand(self):
         self._model.codec = CODECS_FLE.get('0x11')
         self._model.command = 'dir'# Text.data for example
-    def displayValue(self,arg:str):
-        ''' this method will display in the logging widget the new data parsed ''' 
+    def displayValue(self,arg:dict[str,str]):
+        ''' this method will display in the logging widget the new data parsed '''
         self.logging.value += str(arg) + '\n'
     def _restartServer(self):
         self._model.restartServer()
     def authenticateUser(self):
         ''' this funciton will be used to autenticate the account user'''
-        self._model.codec = CODECS_FLE.get('0x04')
-        self._model.run()
-        self._model.codec = CODECS_FLE.get('0x10')
+        self._model.codec = 'auth'
         self._model.run()
     def _reload_logging(self):
         ''' this funcion will be used to reload and load the new information about the command executed in the victim client '''
         # check for errors
-        self.checkErrors()
-        #self._model.run()
+        self._model.codec = 'errors'
         self._model.run()
-        self.checkSucress()
-        self._model.run()
-        #self._model.codec = 
-        #self.logging.value += 
 
     @staticmethod
     def _quit():
@@ -86,8 +79,10 @@ class Terminal(Widget):
         self._cursor_x, self._cursor_y = 0, 0
         self._show_cursor = True
         self._map = {}
+        self._dataIn = ''
+        self._out = []
         self._current_colours = None
-        self.value = None
+        self._value = []# queue of values
         self._parser = AnsiTerminalParser()
         for k, v in [
             (Screen.KEY_LEFT, self.on_kleft),
@@ -178,15 +173,12 @@ class Terminal(Widget):
         return 5
 
     @property
-    def value(self):
-        """
-        Terminal value - not needed for demo.
-        """
-        return
-
-    @value.setter
-    def value(self, new_value):
-        return
+    def dataIn(self):
+        return self._dataIn
+    @dataIn.setter
+    def dataIn(self,arg):
+        self._dataIn = arg
+        
     def _add_stream(self, value):
         """
         Process any output from the TTY.
@@ -260,7 +252,20 @@ class Terminal(Widget):
                 self._cursor_y += 1
                 if self._cursor_y - self._canvas.start_line >= self._h:
                     self._canvas.scroll() 
-
+    def get_line(self,start,cursor):
+        ''' this function will return the data writed on the line afther click the enter key stops if 
+        a character is "" '''
+        string = ''
+        for x in range(start,cursor):
+            code,fg,attr,bg = self._canvas.get_from(x=x, y=self._cursor_y) 
+            string += chr(code)# the old cursor
+        return string
+    @property
+    def value(self):
+        return self._value
+    @value.setter
+    def value(self,arg):
+        self._value.append(arg)
     def process_event(self, event):
         if self._cursor_y - self._canvas.start_line >= self._h:
             self._canvas.scroll()
@@ -268,7 +273,10 @@ class Terminal(Widget):
             if event.key_code > 0:
                 #chr(event.key_code)
                 if event.key_code == 13:
-                    self.value = self._canvas.get_from(x=self._canvas.width, y=self._cursor_y)
+                    # print in new line
+                    self._out.append(self.get_line(start=4,cursor=self._cursor_x))
+                    #print(self._out)
+                    #self._print_at(text=''.join(x for x in self.value), x=4, y=self._cursor_y+1)
                     # gets the data what will sended to the server
                     #self._model.codec = CODECS_FLE.get('0x06')
                     #self._model.command = 'echo "hello world !"'
@@ -305,21 +313,48 @@ class testFrame(Frame):
             y=0,
             hover_focus=True)
         self._model = model
+        self._term = Terminal('he',Widget.FILL_FRAME,title='NO DATA')
         self.set_theme(theme='green')
         #cv = Canvas(screen=screen, height=30, width=30)
         layout = Layout([100],fill_frame=True)
         self.add_layout(layout)
-        layout.add_widget(Terminal('he',Widget.FILL_FRAME,title='NO DATA'))
+        layout.add_widget(self._term)
         #cv.print_at(text='hello', x=20, y=20)
         #layout2 = Layout([1,1,1,1],fill_frame=True)
         #self.add_layout(layout2)
         #layout2.add_widget(Button('ho',on_click=lambda x: print('a'),label='nme',name='nme' ),0)
-        
+        #self._term_val()
         self.fix()
-    def _reload_logging(self):
+    def _restart(self):
+        self._reload_term()
+    def _term_val(self):
+        #self.save()
+        #print(self.data)
+        #print(self._term.value)
+        if self._term._out != []:
+            for x in self._term._out:
+                
+                self._model.codec = CODECS_FLE.get('0x06')
+                self._model.command = self._term.value.pop(0)
+                self._model.run()# execute the command for every \
+        else:
+            self._model.codec = CODECS_FLE.get('0x06')
+            self._model.command = 'dir'
+            self._model.run()# execute the command for every \
+    def _reload_term(self):
         ''' this funcion will be used to reload and load the new information about the command executed in the victim client '''
-        self.save()
-        print(self.data.get('he'))
+        #self.save()
+        self._term_val()
+        if self._model.onChange:
+            if self._model.SUCCRESS != '':
+                self._term.dataIn = self._model.SUCCRESS
+            elif self._model.ERRORS != '':
+                self._term.dataIn = self._model.ERRORS
+            self._model.SUCCRESS = None
+            self._model.ERRORS = None 
+        #self._model.codec = 'errors'
+        #self._term.dataIN = 
+        #print(self.data.get('he'))
         
         pass#self._model.run()
     @staticmethod

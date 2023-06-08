@@ -26,6 +26,9 @@ class CGhiosProtocol(asyncio.Protocol):
     LOGGED = False
     def __init__(self,on_con_lost,stdout):
         self.stdout = stdout
+        self.SUCCRESS = ''# vareable what saves the succres data of the peticions 
+        self.ERRORS = ''# vareable what saves the errors data
+        self.onChange = False
         self.IDN = '829HNDKMLSM09xmakcankancjkanc0iqwucbau'
         self.stringfyJSON = lambda dict: dumps(dict).encode('utf-8')
         self.loadJSON = lambda args: loads(args.decode('utf-8'))
@@ -143,10 +146,14 @@ class CGhiosProtocol(asyncio.Protocol):
                 
                 self.stdout(lds.get('CONTENT'))
             case '0x06':
+                self.onChange = True
+                self.SUCCRESS = lds.get('CONTENT')
                 self.stdout(lds.get('CONTENT'))
                 # requests of succressful execution of commands
     def checkIfExecuteErrors(self,lds:dict[str,str]):
         if not(lds.get('CONTENT') == {}):
+            self.onChange = True
+            self.ERRORS = lds.get('CONTENT')
             self.stdout(f'execute comand error {lds.get("CONTENT")} in {lds.get("IP")} at  {lds.get("TIME")}')
         
     def _analyze_errors(self,lds:dict[str,str|list[str]]):
@@ -156,6 +163,8 @@ class CGhiosProtocol(asyncio.Protocol):
             case '0x11':
                 self.stdout('ERROR WRITING CONTENT ON THE SERVER !')
             case '0x06':
+                self.onChange = True
+                self.ERRORS = lds.get('CONTENT')
                 # errors request
                 self.checkIfExecuteErrors(lds)
       
@@ -235,7 +244,9 @@ class Client:
         #await self.main_loop(command=CODECS_FLE.get('0x11'))# write
         #await self.main_loop(command=CODECS_FLE.get('0x15'))# request errors
         #await self.main_loop(command=CODECS_FLE.get('0x16'))# request succress
+    
     def run(self):
+        #asyncio.r
         asyncio.run(self.startAuth())
         
 class TCP_MASTER(Client):
@@ -250,15 +261,17 @@ class TCP_MASTER(Client):
             'errors':self._checkErrors    
         }# if some flag is inside them then execute this subrutine 
         self._rkeys = self._rapidAcitions.keys()
+        
     async def _Auth(self):
         await super().startAuth()
         # execute the old auth form
     async def _checkErrors(self):
-        self.codec = CODECS_FLE.get('0x16')
         # get succressful
-        self.run()
-        self.codec = CODECS_FLE.get('0x15')
-        self.run()
+        await self.main_loop(command=CODECS_FLE.get('0x16'))
+        await self.main_loop(command=CODECS_FLE.get('0x15'))
+        #self.run()
+        #self.codec = CODECS_FLE.get('0x15')
+        #self.run()
         # get errors
     @property
     def setCommandExec(self):
