@@ -225,5 +225,5 @@ class TCP_MASTER(Client):
 if __name__ == '__main__':
     #TCP_CLIENT(7777)
     print('starting connection !')
-    TCP_MASTER(7777,'172.28.105.96').run()
+    TCP_MASTER(7777,'192.168.176.1').run()
     
