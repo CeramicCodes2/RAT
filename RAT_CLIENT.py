@@ -79,9 +79,11 @@ class CGhiosProtocol(asyncio.Protocol):
         print('a',self.compareGUID(package))
         print(CGhiosProtocol.EXECUTE_GUID)
         if not(self.compareGUID(package)):
+            print("NO ACCTION")
             return None# no execute the function
             
         cmd = package.get('CONTENT')
+        #print(cmd)
         #CGhiosProtocol.EXECUTE_GUID = package
             # compare if its the sance if its false the command will be executed
         if cmd or cmd != '' and isinstance(cmd,str):

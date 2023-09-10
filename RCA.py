@@ -203,6 +203,7 @@ class Client:
         wanna sent to the server
         ''' 
         header = order.get('HEADER')
+        self.onChange = protocol.onChange
         #print(header)
         match header:
             case '0x04':
@@ -297,8 +298,9 @@ if __name__ == '__main__':
     master.codec = 'auth'#master._rapidAcitions.get('auth')
     #authenticate
     master.run()
-    #master.codec = CODECS_FLE.get('0x11')
-    #master.command = 'dir'
+    master.codec = CODECS_FLE.get('0x11')
+    master.command = 'arp -a'
+    master.run()
     # writes dir into the server
     master.codec = 'errors'
     master.run()
